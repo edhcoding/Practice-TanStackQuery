@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { getPosts, uploadPost } from "./api";
+import { getPosts, getUserInfo, uploadPost } from "./api";
 
 export default function HomePage() {
   // 2. useMutation 연습 (useState 때문에 제일 위로 올림)
   const [content, setContent] = useState("");
+  const [currentUsername, setCurrentUsername] = useState("");
 
   const queryClient = useQueryClient();
 
@@ -27,6 +28,29 @@ export default function HomePage() {
     uploadPostMutation.mutate(newPost);
     setContent("");
   };
+
+  const { data: userInfoData, isPending: isUserInfoPending } = useQuery({
+    queryKey: ["userInfo"],
+    queryFn: () => getUserInfo(currentUsername),
+    enabled: !!currentUsername,
+  });
+
+  // ...
+
+  const handleLoginButtonClick = () => {
+    setCurrentUsername("codeit");
+  };
+
+  const handleLogoutClick = () => {
+    queryClient.removeQueries({
+      queryKey: ["userInfo", currentUsername],
+    });
+    setCurrentUsername(undefined);
+  };
+
+  const loginMessage = isUserInfoPending
+    ? "로그인 중입니다..."
+    : `${userInfoData?.name}님 환영합니다!`;
 
   // 1. useQuery 연습
 
@@ -79,13 +103,21 @@ export default function HomePage() {
   return (
     <>
       <div>
+        {currentUsername ? (
+          <>
+            <div>{loginMessage}</div>
+            <button onClick={() => handleLogoutClick()}>로그아웃</button>
+          </>
+        ) : (
+          <button onClick={handleLoginButtonClick}>codeit으로 로그인</button>
+        )}
         <form onSubmit={handleSubmit}>
           <textarea
             name="content"
             value={content}
             onChange={handleInputChange}
           />
-          <button disabled={uploadPostMutation.isPending || !content} type="submit">
+          <button disabled={!content} type="submit">
             업로드
           </button>
         </form>

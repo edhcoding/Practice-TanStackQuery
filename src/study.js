@@ -200,3 +200,34 @@
  * 포스트가 업로드되는 중에는 중복해서 업로드를 하면 안 되니까 버튼을 비활성화해 보도록 합시다. 뮤테이션에는 isPending이라는 값이 있는데요. 
  * 다음과 같이 uploadPostMutation.isPending 값을 이용하면 간단히 구현할 수 있습니다.
  */
+
+
+/**
+ * Dependant Query란?
+ * enabled 옵션을 사용하면 enabled 값이 true가 되어야만 해당 쿼리가 실행되는데요. 
+ * 이렇게 어떤 특정 값이나 조건이 충족된 이후에 실행되는 쿼리를 Dependant Query라고 합니다.
+ */
+// ex)
+// const { data: user } = useQuery({
+//   queryKey: ['user', email],
+//   queryFn: getUserByEmail,
+// });
+
+// const userId = user?.id
+
+// const {
+//   data: projects,
+// } = useQuery({
+//   queryKey: ['projects', userId],
+//   queryFn: getProjectsByUser,
+//   enabled: !!userId,                ............
+// });
+
+// 만약 어떤 쿼리가 userId 값이 있을 때만 실행하도록 하고 싶으면 다음과 같이 설정해 주면 됩니다. 
+// 그러면 userId가 있는 경우 true, 없는 경우 false로 옵션값이 설정될 거에요.
+// enabled 옵션값으로 꼭 앞선 쿼리에서 가져온 데이터가 들어가야만 하는 것은 아닙니다. 
+// 사실 위의 경우에도 백엔드 API 설계에 따라서 두 번의 쿼리가 아니라 한 번의 쿼리로 끝낼 수도 있는데요. 
+// 예를 들어 getProjectsByUserEmail() 이라는 함수를 통해 유저의 이메일 주소를 백엔드로 전달하고, 
+// 그에 맞는 유저의 프로젝트를 받을 수 있는 API가 있다면 한 번의 쿼리로 끝낼 수도 있을 겁니다.
+// 실제로 enabled 옵션은 쿼리의 순서를 정하기 위해 사용하기보다는 어떤 쿼리를 바로 실행하지 않고 특정한 값이 있거나 
+// 특정 상황이 되었을 때 실행하도록 하는 등, 다양한 시나리오에서 활용할 수 있습니다.
