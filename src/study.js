@@ -1,4 +1,16 @@
 /**
+   * data - data에는 우리가 백엔드에서 받아온 데이터들이 들어 있고 리스폰스 바디로 받은 데이터가 객체로 되어 있고,
+   *  페이지네이션에 필요한 정보들과 함께 results란 항목에 실제 포스트 데이터가 배열로 들어가 있는 것을 볼 수 있음
+   *
+   * dataUpdatedAt -  현재의 데이터를 받아온 시간을 나타내는 항목임,
+   * 이 시간을 기준으로 언제 데이터를 refetch 할 것인지 등을 정하게 됨
+   *
+   * 그다음에 isError, isFetched, isPending, isPaused, isSuccess와 같은 다양한 상태 정보도 확인해 볼 수 있고
+   * status라는 항목에는 success라고 적혀있는 걸 보니 데이터를 성공적으로 받아왔다는 뜻인 것 같음
+   * 그 외에도 fetchStatus, isStale, isPlaceholderData 등등 아직은 잘 모르는 값들이 많은데요. 앞으로 하나씩 차근차근 알아보도록 합시다.
+   */
+
+/**
  * status 두가지 종류
  * query status는 실제로 받아 온 data 값이 있는지 없는지를 나타내는 상태 값입니다.
  * fetch status는 queryFn() 함수가 현재 실행되는 중인지 아닌지를 나타냄
@@ -137,4 +149,54 @@
  *   queryFn: () => getPrivatePostsByUsername(username)  ===============> queryFn: ({ queryKey }) => getPostsByUserId(queryKey[1]), queryKey의 index를 이용해서도 작성가능
  * });
  * 
+ */
+
+
+/**
+ * useMutation
+ * 뮤테이션이란, 사이드 이펙트를 가진 함수를 의미합니다.
+ * 데이터베이스에 새로운 값을 추가하거나 수정, 삭제하는 행위는 사이드 이펙트에 해당합니다. 
+ * 
+ * useMutation()은 useQuery()와 차이점이 하나 있습니다. 
+ * useQuery()의 쿼리 함수는 컴포넌트가 마운트되면서 자동으로 실행되지만, useMutation()은 실제로 뮤테이션하는 함수를 직접 실행해 줘야 하는데요. 
+ * mutate() 함수를 통해 mutationFn으로 등록했던 함수를 실행할 수 있고, 그래야만 백엔드 데이터를 실제로 수정하게 됩니다.
+ * 
+ * 참고로 mutate()를 하면 백엔드의 데이터는 변경이 되지만, 현재 캐시에 저장된 데이터는 refetch를 하지 않는 이상 기존의 데이터가 그대로 저장되어 있습니다. 
+ * 따라서 refetch를 해줘야만 변경된 데이터를 화면에 제대로 반영할 수 있는데요.
+ * 
+ * 
+ * useMutation()훅을 이용해 새로운 데이터를 추가해 보았음 그런데 캐시에 있는 데이터가 업데이트되지 않아, 새로운 데이터를 확인하려면 새로고침을 해 줬어야 함
+ * 해결법 : invalidateQueries() 함수
+ * 이럴 때 쿼리 클라이언트의 invalidateQueries()라는 함수를 사용하면 업로드가 끝난 이후에 자동으로 refetch를 하도록 설정할 수 있습니다.
+ * 말 그대로 캐시에 있는 모든 쿼리 혹은 특정 쿼리들을 invalidate하는 함수인데요.
+ * invalidate은 '무효화하다' 라는 뜻을 가지고 있는데, 여기서는 캐시에 저장된 쿼리를 무효화한다는 의미입니다. 
+ * 쿼리를 invalidate하면 해당 쿼리를 통해 받아 온 데이터를 stale time이 지났는지 아닌지에 상관없이
+ * 무조건 stale 상태로 만들고, 해당 데이터를 백그라운드에서 refetch하게 됩니다.
+ * 쿼리 클라이언트는 useQueryClient() 훅을 사용해서 가져올 수 있고요, 원하는 시점에 queryClient.invalidateQueries() 함수를 실행하면 됩니다.
+ * 
+ * 
+ * 뮤테이션 객체에는 onMutate, onSuccess, onError, onSettled와 같은 주요 옵션들이 있음
+ * 
+ * mutate() 함수의 콜백 옵션
+ * onSuccess, onError, onSettled와 같은 옵션은 useMutation()에서도 사용할 수 있고 mutate() 함수에서도 사용할 수 있습니다. 
+ * 이때 useMutation()에 등록한 콜백 함수들이 먼저 실행되고, 그다음에 mutate()에 등록한 콜백 함수들이 실행됩니다.
+ * uploadPostMutation.mutate(newPost, {
+ * onSuccess: () => {
+ *   console.log('onSuccess in mutate');
+ * },
+ * onSettled: () => {
+ *   console.log('onSettled in mutate');
+ * },
+ * });
+ * 
+ * 여기서 한 가지 주의할 점이 있습니다. useMutation()에 등록된 콜백 함수들은 컴포넌트가 언마운트되더라도 실행이 되지만, 
+ * mutate()의 콜백 함수들은 만약 뮤테이션이 끝나기 전에 해당 컴포넌트가 언마운트되면 실행되지 않는 특징을 가지고 있어요. 
+ * 따라서 query invalidation과 같이 뮤테이션 과정에서 꼭 필요한 로직은 useMutation()을 통해 등록하고, 그 외에 다른 페이지로 리다이렉트한다든가, 
+ * 혹은 결과를 토스트로 띄워주는 것과 같이 해당 컴포넌트에 종속적인 로직은 mutate()를 통해 등록해 주면 됩니다.
+ */
+
+/**
+ * isPending 프로퍼티 활용하기
+ * 포스트가 업로드되는 중에는 중복해서 업로드를 하면 안 되니까 버튼을 비활성화해 보도록 합시다. 뮤테이션에는 isPending이라는 값이 있는데요. 
+ * 다음과 같이 uploadPostMutation.isPending 값을 이용하면 간단히 구현할 수 있습니다.
  */

@@ -1,7 +1,35 @@
-import { useQuery } from "@tanstack/react-query";
-import { getPosts, getPostsByUsername } from "./api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { getPosts, uploadPost } from "./api";
 
 export default function HomePage() {
+  // 2. useMutation 연습 (useState 때문에 제일 위로 올림)
+  const [content, setContent] = useState("");
+
+  const queryClient = useQueryClient();
+
+  const uploadPostMutation = useMutation({
+    mutationFn: (newPost) => uploadPost(newPost),
+    onSuccess: () => {
+      // onSuccess, 즉 뮤테이션이 성공한 시점에 ['post'] 쿼리를 invalidate해 주는 함수를 콜백으로 등록해 주면 포스트를 업로드하자마자
+      // 업로드된 포스트까지 화면에 잘 보이는 것을 확인할 수 있습니다.
+      queryClient.invalidateQueries({ queryKey: ["posts"] }); // 무효화해서 stale일 상태로 만들어 refetch되게 만듬
+    },
+  });
+
+  const handleInputChange = (e) => {
+    setContent(e.target.value);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newPost = { username: "codeit", content };
+    uploadPostMutation.mutate(newPost);
+    setContent("");
+  };
+
+  // 1. useQuery 연습
+
   // const result = useQuery({ queryKey: ["posts"], queryFn: getPosts });
   // console.log(result);
 
@@ -9,6 +37,7 @@ export default function HomePage() {
   // const result2 = useQuery({
   //   queryKey: ["posts", username],
   //   queryFn: () => getPostsByUsername(username),
+  //   staleTime: 60 * 1000,
   // });
   // console.log(result2);
 
@@ -47,27 +76,29 @@ export default function HomePage() {
 
   const posts = postsData?.results ?? [];
 
-  /**
-   * data - data에는 우리가 백엔드에서 받아온 데이터들이 들어 있고 리스폰스 바디로 받은 데이터가 객체로 되어 있고,
-   *  페이지네이션에 필요한 정보들과 함께 results란 항목에 실제 포스트 데이터가 배열로 들어가 있는 것을 볼 수 있음
-   *
-   * dataUpdatedAt -  현재의 데이터를 받아온 시간을 나타내는 항목임,
-   * 이 시간을 기준으로 언제 데이터를 refetch 할 것인지 등을 정하게 됨
-   *
-   * 그다음에 isError, isFetched, isPending, isPaused, isSuccess와 같은 다양한 상태 정보도 확인해 볼 수 있고
-   * status라는 항목에는 success라고 적혀있는 걸 보니 데이터를 성공적으로 받아왔다는 뜻인 것 같음
-   * 그 외에도 fetchStatus, isStale, isPlaceholderData 등등 아직은 잘 모르는 값들이 많은데요. 앞으로 하나씩 차근차근 알아보도록 합시다.
-   */
-
   return (
-    <div>
-      <ul>
-        {posts.map((post) => (
-          <li key={post.id}>
-            {post.user.name}: {post.content}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      <div>
+        <form onSubmit={handleSubmit}>
+          <textarea
+            name="content"
+            value={content}
+            onChange={handleInputChange}
+          />
+          <button disabled={uploadPostMutation.isPending || !content} type="submit">
+            업로드
+          </button>
+        </form>
+      </div>
+      <div>
+        <ul>
+          {posts.map((post) => (
+            <li key={post.id}>
+              {post.user.name}: {post.content}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
   );
 }
