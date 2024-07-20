@@ -1,13 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { getPosts, getUserInfo, uploadPost } from "./api";
+
+const PAGE_LIMIT = 10;
 
 export default function HomePage() {
   // 2. useMutation 연습 (useState 때문에 제일 위로 올림)
   const [content, setContent] = useState("");
   const [currentUsername, setCurrentUsername] = useState("");
+  const [page, setPage] = useState(0);
 
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); // invalidateQueries, removeQueries, prefetchQuery
 
   const uploadPostMutation = useMutation({
     mutationFn: (newPost) => uploadPost(newPost),
@@ -25,7 +33,7 @@ export default function HomePage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const newPost = { username: "codeit", content };
-    uploadPostMutation.mutate(newPost);
+    uploadPostMutation.mutate(newPost); // .mutate는 useMutation의 mutationFn를 실행시켜줌
     setContent("");
   };
 
@@ -84,15 +92,35 @@ export default function HomePage() {
   //   },
   // });
 
+  // const {
+  //   data: postsData,
+  //   isPending,
+  //   isError,
+  // } = useQuery({
+  //   queryKey: ["posts"],
+  //   queryFn: getPosts,
+  //   retry: 0, //  테스트할 때는 retry 횟수를 0으로 조정하면 에러 화면을 더 빨리 볼 수 있어서 편하게 테스트할 수 있습니다.
+  // });
+
   const {
     data: postsData,
     isPending,
     isError,
+    isPlaceholderData, // 현재 보이는 데이터가 이전 데이터라면 버튼 비활성화 시켜줘야함, 그렇지 않으면 유저가 다음 페이지 버튼을 마구 누르는 경우, 존재하지 않는 페이지로 리퀘스트가 갈 수도 있기 때문임
   } = useQuery({
-    queryKey: ["posts"],
-    queryFn: getPosts,
-    retry: 0, //  테스트할 때는 retry 횟수를 0으로 조정하면 에러 화면을 더 빨리 볼 수 있어서 편하게 테스트할 수 있습니다.
+    queryKey: ["posts", page],
+    queryFn: () => getPosts(page, PAGE_LIMIT),
+    placeholderData: keepPreviousData, // 이전의 데이터를 유지해서 보여주다가 새로운 데이터 fetch가 완료되면 자연스럽게 새로운 데이터로 바꿔서 보여주게 됨
   });
+
+  useEffect(() => { // 좀 더 심리스(seamless)(원활한)한 유저 인터페이스를 만들고 싶다면 데이터를 prefetch하는 방법도 있습니다.
+    if (!isPlaceholderData && postsData?.hasMore) {
+      queryClient.prefetchQuery({ // 쿼리 클라이언트의 prefetchQuery 함수를 이용하면, 데이터를 미리 fetch해 놓기 때문에 다음 페이지로 갈 때 전혀 어색함이나 끊김이 없이 2 페이지의 데이터를 보여줄 수 있습니다.
+        queryKey: ['posts', page + 1],
+        queryFn: () => getPosts(page + 1, PAGE_LIMIT),
+      });
+    }
+  }, [isPlaceholderData, postsData, queryClient, page]);
 
   if (isPending) return "로딩 중입니다...";
 
@@ -130,6 +158,20 @@ export default function HomePage() {
             </li>
           ))}
         </ul>
+        <div>
+          <button
+            disabled={page === 0}
+            onClick={() => setPage((old) => Math.max(old - 1, 0))} // 인수중에 가장 큰 수를 반환함
+          >
+            &lt;
+          </button>
+          <button
+            disabled={isPlaceholderData || !postsData?.hasMore}
+            onClick={() => setPage((old) => old + 1)}
+          >
+            &gt;
+          </button>
+        </div>
       </div>
     </>
   );
