@@ -221,7 +221,7 @@ export default function HomePage({ currentUserInfo, postId }) {
     queryKey: ["posts"],
     queryFn: ({ pageParam }) => getPosts(pageParam, PAGE_LIMIT),
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages, lastPageParam, allPageParams) =>
+    getNextPageParam: (lastPage, allPages, lastPageParam, allPageParams) => // allPages, allPageParams 안쓰더라도 넣어야 함! 안넣으면 데이터 더 불러오기 기능 안됨
       lastPage.hasMore ? lastPageParam + 1 : undefined,
     // 이 프로젝트의 경우 현재 0 페이지라면 그다음 값은 1이 되어야 할 텐데요. 따라서 0 페이지의 데이터에서 hasMore 값을 확인 후,
     // true인 경우 lastPageParam의 값인 0에 1을 더한 값 1을 리턴하도록 했습니다. false인 경우 undefined나 null을 리턴해 주면 되는데,
