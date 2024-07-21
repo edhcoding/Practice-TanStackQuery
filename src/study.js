@@ -232,11 +232,90 @@
 /**
  * paginated query
  * 리액트 쿼리에서는 좀 더 부드러운 UI 전환을 위해 placeholderData 라는 것을 설정해 줄 수 있습니다.
- * useQuery()에서 placeholderData 옵션에 keepPreviousData 혹은 (prevData) => prevData를 넣어주면 페이지가 새로 바뀌더라도 
+ * useQuery()에서 placeholderData 옵션에 keepPreviousData 혹은 (prevData) => prevData를 넣어주면 페이지가 새로 바뀌더라도
  * 매번 pending 상태가 되지 않고, 이전의 데이터를 유지해서 보여주다가 새로운 데이터 fetch가 완료되면 자연스럽게 새로운 데이터로 바꿔서 보여주게 됩니다.
- * 
- * 그런데 이때 중간 과정에서 다음 페이지 버튼이 활성화된 채로 있는데요. 
- * 현재 보이는 데이터가 이전 데이터, 즉 placeholderData라면 다음 페이지 버튼을 비활성화해 주도록 합시다. 
- * 그렇지 않으면 유저가 다음 페이지 버튼을 마구 누르는 경우, 존재하지 않는 페이지로 리퀘스트가 갈 수도 있기 때문이에요. 
+ *
+ * 그런데 이때 중간 과정에서 다음 페이지 버튼이 활성화된 채로 있는데요.
+ * 현재 보이는 데이터가 이전 데이터, 즉 placeholderData라면 다음 페이지 버튼을 비활성화해 주도록 합시다.
+ * 그렇지 않으면 유저가 다음 페이지 버튼을 마구 누르는 경우, 존재하지 않는 페이지로 리퀘스트가 갈 수도 있기 때문이에요.
  * useQuery()의 리턴 값에서 isPlaceholderData 값을 활용하면 됩니다.
+ */
+
+/**
+ * 더 불러오기 기능 구현
+ * 리액트 쿼리에 useInfiniteQuery를 이용하면 쉽게 구현가능함
+ */
+{
+  /* <div>
+   <form onSubmit={handleSubmit}>
+      <textarea
+         name='content'
+         value={content}
+         onChange={handleInputChange}
+      />
+      <button
+         disabled={uploadPostMutation.isPending || !content}
+         type='submit'
+      >
+         업로드
+      </button>
+   </form>
+   </div>
+   <div>
+   <ul>
+      {posts.map((post) => (
+         <li key={post.id}>{`${post.user.id}: ${post.content}`}</li>
+      ))}
+   </ul>
+   <div>
+      <button>더 불러오기</button>
+   </div>
+</div> */
+}
+/**
+ *  기존에 사용하던 useQuery()를 useInfiniteQuery()로 바꿔 줍시다. 이때 useQuery()와는 달리 useInfiniteQuery()에서는
+ * initialPageParam과 getNextPageParam 옵션을 설정해 줘야 하는데요.
+ * 페이지네이션과는 달리 페이지 별로 데이터를 별도로 저장하지 않고 전체 포스트를 한 번에 관리할 것이기 때문에 쿼리 키는 다시 ['posts']로 변경해 줍니다.
+ * 쿼리 함수도 pageParam이라는 값을 받아서 백엔드에 전달할 페이지값으로 사용하도록 변경해 주겠습니다.
+ *
+ * useInfiniteQuery()가 어떻게 동작하는지 자세히 알아봅시다. useQuery()에서는 data가 백엔드에서 받아 온 하나의 페이지 정보만 담고 있지만,
+ * useInfiniteQuery()에서는 data.pages에 배열의 형태로 모든 페이지의 정보를 담고 있게 됩니다.
+ * 페이지네이션을 생각해 보면, 처음엔 첫 번째 페이지(0 페이지)의 데이터를 백엔드로부터 받아와 해당 데이터만 화면에 보여주고,
+ * 첫번째 페이지의 데이터는 ['posts', 0]의 쿼리 키로 캐싱했었죠?
+ * 그 이후에 다음 페이지로 넘어가면 두 번째 페이지(1 페이지)의 데이터를 백엔드로부터 받아 와 역시 해당 데이터만 화면에 보여 주고,
+ * 두 번째 페이지의 데이터는 ['posts', 1]의 쿼리 키로 캐싱했고요.
+ * 그런데 useInfiniteQuery()에서는 data.pages 라는 배열 안에 지금까지 받아 온 모든 페이지의 데이터가 담기게 됩니다.
+ * 맨 처음 첫 번째 페이지의 데이터를 받아오면 data.pages 배열의 0번 인덱스에 해당 데이터가 저장되고,
+ * 두 번째 페이지로 넘어가면 data.pages 배열의 1번 인덱스에 데이터가 저장되는 식이에요.
+ * 하나의 배열에 두 페이지의 데이터들이 모두 담겨있으므로 첫 번째와 두 번째 데이터를 한 번에 화면에 보여 줄 수 있는데요.
+ * 이런 식으로 더 불러오기를 구현할 수 있습니다. 이 데이터들은 ['posts']라는 하나의 쿼리 키로 캐싱됩니다.
+ *
+ * page param 사용하기
+ * initialPageParam: 0,
+ * getNextPageParam: (lastPage, allPages, lastPageParam, allPageParams) =>
+ *    lastPage.hasMore ? lastPageParam + 1 : undefined,
+ * 이때, initialPageParam으로는 초기 페이지 설정값을 정하게 되는데요.
+ * 우리가 사용하는 API에서는 0 페이지가 초기 페이지니까 값을 0으로 설정했습니다.
+ *
+ * 그리고 getNextPageParam() 함수로는 다음 페이지의 설정값을 정하게 됩니다.
+ * getNextPageParam()은 lastPage, allPages, lastPageParam, allPageParams를 파라미터로 전달받는데요.
+ * - lastPage는 현재까지 중 가장 마지막 페이지의 데이터가 전달됩니다.
+ * 만약 현재 2 페이지에 해당하는 데이터까지 받아 왔다면 2 페이지의 데이터가 lastPage로 전달되겠죠.
+ * - allPages로는 모든 페이지의 데이터가 전달되고요.
+ * - lastPageParam은 현재까지 중 가장 마지막 페이지의 설정값을 말하는데요.
+ * 즉 현재 2 페이지까지 받아 왔다면 lastPageParam은 2가 됩니다.
+ * - allPageParams는 모든 페이지의 각각의 페이지 설정값을 가지고 있게 되고요.
+ *
+ * 다음 페이지 불러오기
+ * 다음 페이지를 불러오려면 useInfiniteQuery()의 리턴 값 중 하나인 fetchNextPage() 함수를 이용하면 되는데요.
+ * fetchNextPage() 함수를 실행하면 getNextPageParam() 함수의 리턴 값이 undefined나 null이 아닌 경우,
+ * 해당 리턴 값을 쿼리 함수의 pageParam으로 전달해 그다음 페이지 데이터를 가져옵니다.
+ * 따라서 우리는 "더 불러오기" 버튼의 onClick() 함수로 fetchNextPage() 함수를 등록해 주면 되겠죠.
+ *
+ * 버튼 비활성화 처리하기
+ * useInfiniteQuery()의 리턴 값 중 hasNextPage와 isFetchingNextPage를 이용하면 다음과 같이 간단히 구현할 수 있습니다.
+ * <button
+ *   onClick={fetchNextPage}
+ *   disabled={!hasNextPage || isFetchingNextPage}
+ * >
  */

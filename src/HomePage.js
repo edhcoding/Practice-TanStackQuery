@@ -1,5 +1,6 @@
 import {
   keepPreviousData,
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -13,7 +14,7 @@ import {
   uploadPost,
 } from "./api";
 
-// const PAGE_LIMIT = 10;
+const PAGE_LIMIT = 3;
 
 export const FEED_VARIANT = {
   HOME_FEED: "HomeFeed",
@@ -150,63 +151,88 @@ export default function HomePage({ currentUserInfo, postId }) {
   // const posts = postsData?.results ?? [];
 
   // 댓글 목록 페이지네이션
+  // const {
+  //   data: commentsData,
+  //   isPending,
+  //   isPlaceholderData,
+  // } = useQuery({
+  //   queryKey: [QUERY_KEYS.COMMENTS, postId, page],
+  //   queryFn: () => getCommentsByPostId(postId, page, COMMENTS_PAGE_LIMIT),
+  //   placeholderData: keepPreviousData,
+  // });
+
+  // const addCommentMutation = useMutation({
+  //   mutationFn: (newComment) => addComment(postId, newComment),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({
+  //       queryKey: [QUERY_KEYS.COMMENTS, postId],
+  //     });
+  //     queryClient.invalidateQueries({
+  //       queryKey: [QUERY_KEYS.COMMENT_COUNT, postId],
+  //     });
+  //   },
+  // });
+
+  // const handleAddComment = (newComment) => {
+  //   setPage(0);
+  //   addCommentMutation.mutate(newComment);
+  // };
+
+  // useEffect(() => {
+  //   if (!isPlaceholderData && commentsData?.hasMore) {
+  //     queryClient.prefetchQuery({
+  //       queryKey: [QUERY_KEYS.COMMENTS, postId, page + 1],
+  //       queryFn: () =>
+  //         getCommentsByPostId(postId, page + 1, COMMENTS_PAGE_LIMIT),
+  //     });
+  //   }
+  // }, [isPlaceholderData, commentsData, queryClient, postId, page]);
+
+  // if (isPending) return <div>"로딩 중입니다..."</div>;
+
+  // const comments = commentsData?.results ?? [];
+
+  // const paginationButtons = (
+  //   <div>
+  //     <button
+  //       disabled={page === 0}
+  //       onClick={() => setPage((old) => Math.max(old - 1, 0))}
+  //     >
+  //       &lt;
+  //     </button>
+  //     <button
+  //       disabled={isPlaceholderData || !commentsData?.hasMore}
+  //       onClick={() => setPage((old) => old + 1)}
+  //     >
+  //       &gt;
+  //     </button>
+  //   </div>
+  // );
+
+  // Infinite Query
   const {
-    data: commentsData,
+    data: postsData,
     isPending,
-    isPlaceholderData,
-  } = useQuery({
-    queryKey: [QUERY_KEYS.COMMENTS, postId, page],
-    queryFn: () => getCommentsByPostId(postId, page, COMMENTS_PAGE_LIMIT),
-    placeholderData: keepPreviousData,
+    isError,
+    hasNextPage,
+    fetchNextPage, // 다음페이지 불러오기
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["posts"],
+    queryFn: ({ pageParam }) => getPosts(pageParam, PAGE_LIMIT),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages, lastPageParam, allPageParams) =>
+      lastPage.hasMore ? lastPageParam + 1 : undefined,
+    // 이 프로젝트의 경우 현재 0 페이지라면 그다음 값은 1이 되어야 할 텐데요. 따라서 0 페이지의 데이터에서 hasMore 값을 확인 후,
+    // true인 경우 lastPageParam의 값인 0에 1을 더한 값 1을 리턴하도록 했습니다. false인 경우 undefined나 null을 리턴해 주면 되는데,
+    // 이는 다음 페이지가 없다는 것을 의미합니다.
   });
 
-  const addCommentMutation = useMutation({
-    mutationFn: (newComment) => addComment(postId, newComment),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.COMMENTS, postId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.COMMENT_COUNT, postId],
-      });
-    },
-  });
+  const postsPages = postsData?.pages ?? [];
 
-  const handleAddComment = (newComment) => {
-    setPage(0);
-    addCommentMutation.mutate(newComment);
-  };
+  if (isPending) return "로딩 중입니다...";
 
-  useEffect(() => {
-    if (!isPlaceholderData && commentsData?.hasMore) {
-      queryClient.prefetchQuery({
-        queryKey: [QUERY_KEYS.COMMENTS, postId, page + 1],
-        queryFn: () =>
-          getCommentsByPostId(postId, page + 1, COMMENTS_PAGE_LIMIT),
-      });
-    }
-  }, [isPlaceholderData, commentsData, queryClient, postId, page]);
-
-  if (isPending) return <div>"로딩 중입니다..."</div>;
-
-  const comments = commentsData?.results ?? [];
-
-  const paginationButtons = (
-    <div>
-      <button
-        disabled={page === 0}
-        onClick={() => setPage((old) => Math.max(old - 1, 0))}
-      >
-        &lt;
-      </button>
-      <button
-        disabled={isPlaceholderData || !commentsData?.hasMore}
-        onClick={() => setPage((old) => old + 1)}
-      >
-        &gt;
-      </button>
-    </div>
-  );
+  if (isError) return "에러가 발생했습니다.";
 
   return (
     <>
@@ -266,6 +292,25 @@ export default function HomePage({ currentUserInfo, postId }) {
           buttonDisabled={addCommentMutation.isLoading}
         />
       </div> */}
+      <div>
+        <div>
+          <button
+            onClick={fetchNextPage}
+            disabled={!hasNextPage || isFetchingNextPage}
+          >
+            더 불러오기
+          </button>
+        </div>
+        <ul>
+          {postsPages.map((postPage) =>
+            postPage.results.map((post) => (
+              <li key={post.id}>
+                {post.user.name}: {post.content}
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
     </>
   );
 }
