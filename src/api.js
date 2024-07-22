@@ -60,16 +60,63 @@ export async function getCommentsByPostId(postId, page, limit) {
 
 export async function addComment(postId, newComment) {
   const response = await fetch(`${BASE_URL}/posts/${postId}/comments`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(newComment),
   });
 
   if (!response.ok) {
-    throw new Error('Failed to add the comment.');
+    throw new Error("Failed to add the comment.");
   }
   return await response.json();
 }
 
+// 좋아요 API
+// 모든 좋아요 조회
+export async function getLikeCountByPostId(postId) {
+  const response = await fetch(`${BASE_URL}/posts/${postId}/likes`);
+  const body = await response.json();
+  return body.count;
+}
+
+// 특정 유저의 좋아요 조회
+export async function getLikeStatusByUsername(postId, username) {
+  const response = await fetch(`${BASE_URL}/posts/${postId}/likes/${username}`);
+  if (response.status === 200) {
+    return true;
+  } else if (response.status === 404) {
+    return false;
+  } else {
+    throw new Error("Failed to get like status of the post.");
+  }
+}
+
+// 좋아요 생성
+export async function likePost(postId, username) {
+  const response = await fetch(
+    `${BASE_URL}/posts/${postId}/likes/${username}`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to like the post.");
+  }
+}
+
+// 좋아요 삭제
+export async function unlikePost(postId, username) {
+  const response = await fetch(
+    `${BASE_URL}/posts/${postId}/likes/${username}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to unlike the post.");
+  }
+}

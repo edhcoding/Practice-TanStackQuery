@@ -245,33 +245,7 @@
  * 더 불러오기 기능 구현
  * 리액트 쿼리에 useInfiniteQuery를 이용하면 쉽게 구현가능함
  */
-{
-  /* <div>
-   <form onSubmit={handleSubmit}>
-      <textarea
-         name='content'
-         value={content}
-         onChange={handleInputChange}
-      />
-      <button
-         disabled={uploadPostMutation.isPending || !content}
-         type='submit'
-      >
-         업로드
-      </button>
-   </form>
-   </div>
-   <div>
-   <ul>
-      {posts.map((post) => (
-         <li key={post.id}>{`${post.user.id}: ${post.content}`}</li>
-      ))}
-   </ul>
-   <div>
-      <button>더 불러오기</button>
-   </div>
-</div> */
-}
+
 /**
  *  기존에 사용하던 useQuery()를 useInfiniteQuery()로 바꿔 줍시다. 이때 useQuery()와는 달리 useInfiniteQuery()에서는
  * initialPageParam과 getNextPageParam 옵션을 설정해 줘야 하는데요.
@@ -318,4 +292,24 @@
  *   onClick={fetchNextPage}
  *   disabled={!hasNextPage || isFetchingNextPage}
  * >
+ */
+
+/**
+ * Optimistic Updates
+ * 좋아요를 누를 때마다 1~2초 로딩 시간이 걸린다면 어떨까요? 아마 매번 답답한 마음이 들겠죠.
+ * 옵티미스틱 업데이트는 좋아요 기능과 같이 유저에게 빠른 피드백을 제공해야 하는 경우에 사용합니다.
+ * 간단히 말하자면 서버로부터의 리스폰스를 기다리지 않고 유저에게 바로 낙관적인 피드백을 주는 것이 옵티미스틱 업데이트인데요.
+ * 서버가 제대로 동작하는 걸 낙관적으로 기대하는 것이죠. 예를 들어 '좋아요' 버튼을 눌렀을 때 실제로 서버에 반영이
+ * 제대로 되었는지를 확인하지 않고 유저에게 바로 '좋아요' 버튼을 누른 것처럼 버튼을 활성화해서 보여주는 거죠.
+ *
+ * 이렇게 해도 괜찮은 이유는 리퀘스트는 보통 99% 이상의 확률로 서버에 제대로 반영될 것이고,
+ * 또한 만에 하나 중간에 에러가 발생한다고 해도 치명적인 결함이 아니기 때문입니다. 아마 경험하셨을 수도 있겠지만,
+ * 내가 좋아요를 눌렀던 포스트를 나중에 봤을 때 좋아요가 안 돼 있다면 보통은 "어라? 내가 이거 좋아요 안 눌렀었나?"하면서
+ * 다시 좋아요를 누르면 그만이니까요. 따라서 이러한 상황에서는 매번 서버의 리스폰스를 기다리느라 유저에게 답답함을 주기보다는
+ * 옵티미스틱 업데이트를 이용해 빠른 피드백을 제공하는 것이 더 좋습니다.
+ *
+ * 옵티미스틱 업데이트로 좋아요 구현하기
+ * useMutation()의 다양한 콜백을 이용해 구현해 볼 거임
+ * 실제 뮤테이션 리퀘스트를 보내기 전에 기존의 캐시 데이터를 조작해서 새로운 데이터를 반영해 유저에게 먼저 보여주고,
+ * 그 이후에 뮤테이션이 끝나면 서버에 반영된 데이터를 refetch해서 최신 데이터로 동기화해 주겠습니다.
  */

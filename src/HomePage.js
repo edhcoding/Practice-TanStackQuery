@@ -1,18 +1,18 @@
 import {
-  keepPreviousData,
+  
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  addComment,
-  getCommentsByPostId,
+  
   getPosts,
   getUserInfo,
   uploadPost,
 } from "./api";
+import Post from "./Post";
 
 const PAGE_LIMIT = 3;
 
@@ -33,7 +33,7 @@ export default function HomePage({ currentUserInfo, postId }) {
   // 2. useMutation 연습 (useState 때문에 제일 위로 올림)
   const [content, setContent] = useState("");
   const [currentUsername, setCurrentUsername] = useState("");
-  const [page, setPage] = useState(0);
+  // const [page, setPage] = useState(0);
 
   const queryClient = useQueryClient(); // invalidateQueries, removeQueries, prefetchQuery
 
@@ -214,15 +214,19 @@ export default function HomePage({ currentUserInfo, postId }) {
     data: postsData,
     isPending,
     isError,
-    hasNextPage,
     fetchNextPage, // 다음페이지 불러오기
+    hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ["posts"],
     queryFn: ({ pageParam }) => getPosts(pageParam, PAGE_LIMIT),
     initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages, lastPageParam, allPageParams) => // allPages, allPageParams 안쓰더라도 넣어야 함! 안넣으면 데이터 더 불러오기 기능 안됨
-      lastPage.hasMore ? lastPageParam + 1 : undefined,
+    getNextPageParam: (
+      lastPage,
+      allPages,
+      lastPageParam,
+      allPageParams // allPages, allPageParams 안쓰더라도 넣어야 함! 안넣으면 데이터 더 불러오기 기능 안됨
+    ) => (lastPage.hasMore ? lastPageParam + 1 : undefined),
     // 이 프로젝트의 경우 현재 0 페이지라면 그다음 값은 1이 되어야 할 텐데요. 따라서 0 페이지의 데이터에서 hasMore 값을 확인 후,
     // true인 경우 lastPageParam의 값인 0에 1을 더한 값 1을 리턴하도록 했습니다. false인 경우 undefined나 null을 리턴해 주면 되는데,
     // 이는 다음 페이지가 없다는 것을 의미합니다.
@@ -307,6 +311,19 @@ export default function HomePage({ currentUserInfo, postId }) {
               <li key={post.id}>
                 {post.user.name}: {post.content}
               </li>
+            ))
+          )}
+        </ul>
+      </div>
+      <div>
+        <ul>
+          {postsPages.map((postPage) =>
+            postPage.results.map((post) => (
+              <Post
+                key={post.id}
+                post={post}
+                currentUsername={currentUsername}
+              />
             ))
           )}
         </ul>
